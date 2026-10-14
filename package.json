@@ -1,0 +1,7 @@
+{
+  "name": "inventario-licitaciones-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Frontend de licitaciones y pagos con datos ficticios, sin base de datos",
+  "scripts": {"start": "node scripts/serve.js", "test": "node --test tests/demo-data.test.cjs"}
+}

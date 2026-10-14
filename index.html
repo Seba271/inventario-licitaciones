@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Demostración del inventario de licitaciones y pagos. Frontend sin base de datos, con información ficticia.">
+  <title>Inventario de licitaciones · Demo</title>
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/demo-data.js" defer></script>
+  <script src="assets/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="#/licitaciones"><span class="brand-icon" aria-hidden="true">▤</span> Inventario de licitaciones</a><span class="demo-label">MODO DEMOSTRACIÓN</span></header>
+  <div class="demo-notice">Datos ficticios para explorar el programa. Tus cambios se guardan únicamente en este navegador. <button id="reset-demo" class="text-button">Restablecer datos</button></div>
+  <main id="app" tabindex="-1"></main>
+  <p id="feedback" role="status" aria-live="polite"></p>
+  <footer>Adaptación del proyecto c4_inventario · Licitaciones y pagos · Demo sin base de datos</footer>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Confirmar acción</h2><p id="confirm-message"></p><form method="dialog" class="actions"><button value="cancel" class="button secondary" autofocus>Cancelar</button><button value="accept" class="button danger">Confirmar</button></form></dialog>
+  <noscript>Activa JavaScript en tu navegador para utilizar esta demostración.</noscript>
+</body>
+</html>
