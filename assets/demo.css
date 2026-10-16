@@ -3,3 +3,62 @@
 .demo-tools { font-size: 12px; }
 #feedback { position: fixed; right: 16px; bottom: 16px; max-width: min(440px, calc(100% - 32px)); z-index: 1090; }
 #notificaciones-icono { position: relative; }
+
+/* Keep the original palette; reflow content instead of hiding overflowing fields. */
+main, #app, .navbar .container-fluid, .navbar .container-4 { min-width: 0; }
+#app > .row { margin-left: 0; margin-right: 0; }
+#app h3, .navbar-brand, #payment-title { overflow-wrap: anywhere; }
+.navbar-brand { white-space: normal; margin-right: 0; }
+.navbar .container-fluid { gap: 12px; }
+.navbar .container-4 { max-width: 100%; }
+.navbar form.d-flex { min-width: 0; }
+.navbar input[type="search"] { min-width: 0; }
+.navbar #notificaciones-icono { margin: 0 10px; }
+.navbar .btn { white-space: normal; }
+#tablaindex, #tablaPagos { width: 100%; table-layout: fixed; }
+#tablaindex th, #tablaPagos th { width: auto !important; }
+#tablaindex th, #tablaindex td, #tablaPagos th, #tablaPagos td { overflow-wrap: anywhere; }
+.cell-label { display: none; }
+.cell-value { display: block; min-width: 0; }
+.actions-cell .cell-value { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
+.actions-cell .btn { max-width: 100%; }
+
+@media (max-width: 1399px) {
+  .navbar .container-fluid { justify-content: center; flex-wrap: wrap; }
+  .navbar .tituloCentro { order: -1; flex-basis: 100%; justify-content: center; text-align: center; }
+  .navbar h1.navbar-brand { font-size: clamp(26px, 4vw, 40px) !important; }
+  .navbar #formExcel { margin: 10px 5px !important; flex-shrink: 0; }
+  #tablaindex { display: block; background: transparent; border: 0; padding: 0 12px; }
+  #tablaindex thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #tablaindex tbody { display: grid; gap: 16px; }
+  #tablaindex tbody tr { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #cacdcb; border: 1px solid #39524f; }
+  #tablaindex td:not([hidden]) { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 10px 12px; text-align: left; border: 0; border-bottom: 1px solid #a4b3af; }
+  #tablaindex .cell-label { display: block; font-size: 12px; font-weight: 700; color: #39524f; }
+  #tablaindex td:first-child { grid-column: 1 / -1; flex-direction: row; align-items: baseline; gap: 8px; background: #39524f; color: white; }
+  #tablaindex td:first-child .cell-label { color: white; }
+  #tablaindex td:nth-child(2) { grid-column: 1 / -1; font-size: 20px; font-weight: 600; }
+  #tablaindex .actions-cell, #tablaindex .empty-cell { grid-column: 1 / -1; }
+  #tablaindex .actions-cell .cell-value { justify-content: flex-start; gap: 8px; }
+  #tablaindex .figure { margin: 0; }
+  #tablaindex .btn { min-height: 38px; padding: 7px 12px; }
+}
+@media (max-width: 767px) {
+  #tablaindex tbody tr { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .navbar .container-4 { flex-wrap: wrap; gap: 8px; }
+  .navbar .container-4:last-child { width: 100%; justify-content: center !important; }
+  .navbar form.d-flex { flex: 1; }
+  #tablaPagos { display: block; background: transparent; border: 0; padding: 0 12px; }
+  #tablaPagos thead { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  #tablaPagos tbody { display: grid; gap: 12px; }
+  #tablaPagos tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #cacdcb; border: 1px solid #39524f; }
+  #tablaPagos td { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 10px 12px; border: 0; border-bottom: 1px solid #a4b3af; }
+  #tablaPagos .cell-label { display: block; font-size: 12px; font-weight: 700; color: #39524f; }
+  #tablaPagos td:first-child { grid-column: 1 / -1; background: #39524f; color: white; }
+  #tablaPagos td:first-child .cell-label { color: white; }
+  #tablaPagos .actions-cell, #tablaPagos .empty-cell { grid-column: 1 / -1; }
+  #tablaPagos .actions-cell .cell-value { justify-content: flex-start; gap: 8px; }
+  #tablaPagos .btn { min-height: 38px; padding: 7px 12px; }
+}
+@media (max-width: 419px) {
+  #tablaindex tbody tr, #tablaPagos tbody tr { grid-template-columns: minmax(0, 1fr); }
+}

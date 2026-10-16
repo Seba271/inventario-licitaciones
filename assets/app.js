@@ -55,6 +55,34 @@
   const tenderHeaders = ['Nombre','Tipo','Renovable','Fecha De Inicio','Numero De Meses','Monto Total','Valor Cuota Inicial','Valor Cuota Mensual','Orden De Compra','Nombre De La Empresa','Rut De La Empresa','Usuario Beneficiado','Observacion'];
   const visibleTenders = () => state.licitaciones.filter(x => normalize(tenderFields.map(k => x[k]).join(' ')).includes(normalize(query)));
   const visiblePayments = id => state.pagos.filter(x => x.id_licitacion === id && normalize([x.fecha,x.factura,x.monto].join(' ')).includes(normalize(query)));
+  function labelResponsiveCells() {
+    const table = app.querySelector('table');
+    table.setAttribute('role', 'table');
+    table.removeAttribute('aria-describedby');
+    table.setAttribute('aria-label', currentId ? 'Pagos' : 'Licitaciones');
+    const headings = Array.from(table.querySelectorAll('thead th'));
+    table.querySelectorAll('thead, tbody').forEach(group => group.setAttribute('role', 'rowgroup'));
+    table.querySelectorAll('tr').forEach(row => row.setAttribute('role', 'row'));
+    headings.forEach((heading, index) => {
+      heading.id = `${table.id}-column-${index}`;
+      heading.setAttribute('role', 'columnheader');
+      heading.setAttribute('scope', 'col');
+    });
+    for (const row of table.tBodies[0].rows) {
+      const cells = Array.from(row.cells).filter(cell => !cell.hidden);
+      if (cells.length === 1) { cells[0].classList.add('empty-cell'); continue; }
+      cells.forEach((cell, index) => {
+        cell.setAttribute('role', 'cell');
+        cell.setAttribute('headers', headings[index].id);
+        const value = document.createElement('span'); value.className = 'cell-value';
+        value.append(...cell.childNodes);
+        const label = document.createElement('span'); label.className = 'cell-label';
+        label.setAttribute('aria-hidden', 'true'); label.textContent = headings[index].textContent.trim();
+        cell.append(label, value);
+        if (label.textContent === 'Acciones') cell.classList.add('actions-cell');
+      });
+    }
+  }
   function bindSearch(render) {
     const input = document.querySelector('#search'); input.value = query;
     input.form.onsubmit = event => { event.preventDefault(); query = input.value; render(); };
@@ -86,6 +114,7 @@
       const index = state.licitaciones.indexOf(x) + 1, status = D.status(x), id = encodeURIComponent(x.id);
       return `<tr class="centrado" id="fila-${index}"><td>${index}</td>${tenderFields.map(k => `<td>${esc(x[k])}</td>`).join('')}<td hidden>${D.dates(x).end}</td><td hidden>${D.dates(x).notice}</td><td class="container-custom"><a href="#/licitaciones/${id}/editar" class="btn btn-warning btn-sm" aria-label="Editar ${esc(x.nombre_licitacion)}">Editar</a> <a href="#/pagos/${id}" class="btn btn-primary btn-sm" aria-label="Pagos de ${esc(x.nombre_licitacion)}">Pagos</a> <button type="button" class="btn btn-danger btn-sm" data-delete-tender="${esc(x.id)}" aria-label="Eliminar ${esc(x.nombre_licitacion)}">Eliminar</button></td><td class="centrado"><figure class="figure"><img src="assets/imagenes/semaforo${images[status]}.png" class="figure-img rounded" width="15" height="15" alt="${labels[status]}" title="${labels[status]}"></figure></td></tr>`;
     }).join('') || '<tr><td colspan="16" class="centrado">No hay licitaciones que mostrar.</td></tr>';
+    labelResponsiveCells();
   }
   function configureForm(form, item) {
     for (const element of form.elements) {
@@ -136,6 +165,7 @@
   function renderPaymentRows(id) {
     const all = state.pagos.filter(x => x.id_licitacion === id);
     document.querySelector('#rows').innerHTML = visiblePayments(id).map(x => `<tr><td>${all.indexOf(x)+1}</td><td>${esc(x.fecha)}</td><td>${esc(x.monto)}</td><td>${esc(x.factura)}</td><td><a class="btn btn-warning btn-sm" href="#/pagos/${encodeURIComponent(id)}/${encodeURIComponent(x.id)}/editar" aria-label="Editar pago ${esc(x.factura)}">Editar</a> <button type="button" class="btn btn-danger btn-sm" data-delete-payment="${esc(x.id)}" aria-label="Eliminar pago ${esc(x.factura)}">Eliminar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay pagos que mostrar.</td></tr>';
+    labelResponsiveCells();
   }
   function renderPaymentForm(id, paymentId) {
     const item = state.licitaciones.find(x => x.id === id), payment = paymentId ? state.pagos.find(x => x.id === paymentId && x.id_licitacion === id) : {};

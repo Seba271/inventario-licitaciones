@@ -2,7 +2,9 @@
 
 Versión sin base de datos del programa **c4_inventario**, originalmente desarrollado con PHP y CodeIgniter. Se recuperó la apariencia de las seis vistas entregadas: listado, creación y edición de licitaciones y pagos.
 
-Se reutilizan el CSS original sin modificaciones, las mismas versiones de Bootstrap y Boxicons, el fondo, el logo, las imágenes de semáforo, las tablas con sus columnas originales, los botones y los formularios. El HTML de las vistas está en `assets/original-views.js`; se sustituyeron las expresiones PHP y rutas de servidor por datos y navegación del navegador. Se eliminaron las tarjetas de resumen y la cabecera del rediseño anterior. La tabla conserva el comportamiento del original, incluido el desplazamiento horizontal cuando no cabe en pantallas pequeñas.
+Se reutilizan el CSS original sin modificaciones, las mismas versiones de Bootstrap y Boxicons, el fondo, el logo, las imágenes de semáforo, los botones y los formularios. El HTML de las vistas está en `assets/original-views.js`; se sustituyeron las expresiones PHP y rutas de servidor por datos y navegación del navegador. Se eliminaron las tarjetas de resumen y la cabecera del rediseño anterior.
+
+La adaptación responsiva está en `assets/demo.css`: la tabla de licitaciones se convierte en fichas con todos sus campos y acciones cuando el ancho es menor a 1400 px; la de pagos hace lo mismo por debajo de 768 px. En pantallas grandes las tablas ajustan sus columnas y textos al ancho disponible. Los títulos, búsquedas y formularios también se acomodan sin desplazamiento horizontal.
 
 **No necesita base de datos, PHP, Composer ni instalar paquetes. Toda la información inicial es ficticia.** Los proveedores, órdenes y facturas son ejemplos; los identificadores `DEMO-*` no son RUT reales.
 
