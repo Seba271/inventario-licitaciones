@@ -4,7 +4,7 @@ Versión sin base de datos del programa **c4_inventario**, originalmente desarro
 
 Se reutilizan el CSS original sin modificaciones, las mismas versiones de Bootstrap y Boxicons, el fondo, el logo, las imágenes de semáforo, los botones y los formularios. El HTML de las vistas está en `assets/original-views.js`; se sustituyeron las expresiones PHP y rutas de servidor por datos y navegación del navegador. Se eliminaron las tarjetas de resumen y la cabecera del rediseño anterior.
 
-La adaptación responsiva está en `assets/demo.css`: la tabla de licitaciones se convierte en fichas con todos sus campos y acciones cuando el ancho es menor a 1400 px; la de pagos hace lo mismo por debajo de 768 px. En pantallas grandes las tablas ajustan sus columnas y textos al ancho disponible. Los títulos, búsquedas y formularios también se acomodan sin desplazamiento horizontal.
+La adaptación responsiva está en `assets/demo.css`: las licitaciones y los pagos mantienen siempre el formato de tabla horizontal, con una fila por registro y todos los encabezados visibles. Las columnas tienen anchos proporcionales; el tamaño del texto, los espacios y los botones se compactan y el contenido largo se ajusta dentro de cada celda. No se convierten las filas en fichas. Los títulos, búsquedas y formularios también se acomodan al ancho disponible.
 
 **No necesita base de datos, PHP, Composer ni instalar paquetes. Toda la información inicial es ficticia.** Los proveedores, órdenes y facturas son ejemplos; los identificadores `DEMO-*` no son RUT reales.
 
