@@ -1,0 +1,5 @@
+/* Small demo-only additions. The original estilos.css is kept byte-for-byte. */
+#app:focus { outline: none; }
+.demo-tools { font-size: 12px; }
+#feedback { position: fixed; right: 16px; bottom: 16px; max-width: min(440px, calc(100% - 32px)); z-index: 1090; }
+#notificaciones-icono { position: relative; }

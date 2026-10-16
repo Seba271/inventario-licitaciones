@@ -1,21 +1,37 @@
-<!doctype html>
-<html lang="es">
+<!DOCTYPE html>
+<html lang="es" class="h-100">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Demostración del inventario de licitaciones y pagos. Frontend sin base de datos, con información ficticia.">
-  <title>Inventario de licitaciones · Demo</title>
-  <link rel="stylesheet" href="assets/styles.css">
-  <script src="assets/demo-data.js" defer></script>
-  <script src="assets/app.js" defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Licitaciones :D</title>
+    <!-- Same CSS versions and cascade order as the supplied plantilla.php. -->
+    <link href="assets/vendor/bootstrap-5.3.2.min.css" rel="stylesheet">
+    <link href="assets/vendor/bootstrap-5.0.2.min.css" rel="stylesheet">
+    <link href="assets/styles.css" rel="stylesheet">
+    <link href="assets/vendor/boxicons.min.css" rel="stylesheet">
+    <link href="assets/demo.css" rel="stylesheet">
+    <script src="assets/vendor/bootstrap.bundle.min.js" defer></script>
+    <script src="assets/demo-data.js" defer></script>
+    <script src="assets/original-views.js" defer></script>
+    <script src="assets/app.js" defer></script>
 </head>
-<body>
-  <header class="topbar"><a class="brand" href="#/licitaciones"><span class="brand-icon" aria-hidden="true">▤</span> Inventario de licitaciones</a><span class="demo-label">MODO DEMOSTRACIÓN</span></header>
-  <div class="demo-notice">Datos ficticios para explorar el programa. Tus cambios se guardan únicamente en este navegador. <button id="reset-demo" class="text-button">Restablecer datos</button></div>
-  <main id="app" tabindex="-1"></main>
-  <p id="feedback" role="status" aria-live="polite"></p>
-  <footer>Adaptación del proyecto c4_inventario · Licitaciones y pagos · Demo sin base de datos</footer>
-  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Confirmar acción</h2><p id="confirm-message"></p><form method="dialog" class="actions"><button value="cancel" class="button secondary" autofocus>Cancelar</button><button value="accept" class="button danger">Confirmar</button></form></dialog>
-  <noscript>Activa JavaScript en tu navegador para utilizar esta demostración.</noscript>
+<body class="d-flex flex-column h-100">
+    <main class="flex-shrink-0"><div class="container-custom" id="app" tabindex="-1"></div></main>
+    <footer class="footer mt-auto py-3" id="footer">
+        <div class="container">
+            <a href="https://www.gorecoquimbo.cl/"><img src="assets/imagenes/logo-original.png" alt="Gobierno Regional de Coquimbo"></a>
+            <span class="text-black display-8"><span id="year"></span> | Gobierno Regional De Coquimbo</span>
+            <div class="demo-tools"><small>Demostración con datos ficticios.</small> <button type="button" id="reset-demo" class="btn btn-link btn-sm text-dark">Restablecer datos</button></div>
+        </div>
+    </footer>
+    <div id="feedback" class="alert alert-info" role="status" aria-live="polite" hidden></div>
+    <div class="modal fade" id="eliminaModal" tabindex="-1" aria-labelledby="eliminaModalLabel" aria-hidden="true">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h1 class="modal-title fs-5" id="eliminaModalLabel">Aviso</h1><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+            <div class="modal-body"><p id="confirm-message">¿Desea eliminar este registro?</p></div>
+            <div class="modal-footer"><form id="form-elimina"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button> <button type="submit" class="btn btn-danger" id="confirm-action">Eliminar</button></form></div>
+        </div></div>
+    </div>
+    <noscript>Activa JavaScript para ver la demostración.</noscript>
 </body>
 </html>

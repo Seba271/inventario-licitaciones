@@ -1,136 +1,190 @@
-/* Frontend autónomo adaptado de las vistas de c4_inventario. */
+/* Original CodeIgniter views, backed only by fictitious browser-local data. */
 (() => {
   'use strict';
-  const D=window.DemoData, KEY='inventario-licitaciones-demo-v1';
-  const app=document.querySelector('#app');
-  const money=value=>new Intl.NumberFormat('es-CL',{style:'currency',currency:'CLP',maximumFractionDigits:0}).format(value);
-  const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const date=value=>value?value.split('-').reverse().join('/'):'—';
-  const uid=()=>globalThis.crypto?.randomUUID?.() || `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const labels={active:'Vigente',warning:'Por vencer',expired:'Vencida'};
-  let storageWarning=false;
+  const D = window.DemoData, V = window.OriginalViews;
+  const KEY = 'inventario-licitaciones-demo-v1', app = document.querySelector('#app');
+  const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const uid = () => globalThis.crypto?.randomUUID?.() || `demo-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let storageWarning = false;
   function load() {
     try {
-      const stored=localStorage.getItem(KEY);
-      if(stored) {
-        const parsed=JSON.parse(stored);
-        if(parsed.version!==1||!Array.isArray(parsed.licitaciones)||!Array.isArray(parsed.pagos)||
-          !parsed.licitaciones.every(x=>x&&typeof x.id==='string'&&typeof x.nombre_licitacion==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x.fecha_inicio)&&Number.isInteger(x.meses)&&x.meses>0)||
-          !parsed.pagos.every(x=>x&&typeof x.id==='string'&&typeof x.id_licitacion==='string'&&typeof x.fecha==='string'&&Number.isFinite(x.monto))) throw new Error('Datos incompatibles');
-        return parsed;
+      const stored = localStorage.getItem(KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        if (data.version !== 1 || !Array.isArray(data.licitaciones) || !Array.isArray(data.pagos) ||
+          !data.licitaciones.every(x => x && typeof x.id === 'string' && typeof x.nombre_licitacion === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(x.fecha_inicio) && Number.isInteger(x.meses) && x.meses > 0) ||
+          !data.pagos.every(x => x && typeof x.id === 'string' && typeof x.id_licitacion === 'string' && typeof x.fecha === 'string' && Number.isFinite(x.monto))) throw new Error('Datos incompatibles');
+        return data;
       }
-    } catch { storageWarning=true; }
+    } catch { storageWarning = true; }
     return D.createDemo();
   }
-  let state=load(), timer, query='', filter='all', currentId=null;
-  function notify(message) {clearTimeout(timer);document.querySelector('#feedback').textContent=message;timer=setTimeout(()=>document.querySelector('#feedback').textContent='',6500);}
+  let state = load(), timer, query = '', currentId = null;
+  function notify(message) {
+    clearTimeout(timer);
+    const box = document.querySelector('#feedback'); box.textContent = message; box.hidden = false;
+    timer = setTimeout(() => { box.hidden = true; }, 6500);
+  }
   function persist() {
-    try{localStorage.setItem(KEY,JSON.stringify(state));return true;}
-    catch{notify('No se pudo guardar en el navegador. Los cambios durarán hasta cerrar o recargar esta página.');return false;}
+    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; }
+    catch { notify('No se pudo guardar en el navegador. Los cambios durarán hasta cerrar o recargar esta página.'); return false; }
   }
-  async function confirmAction(message) {
-    const dialog=document.querySelector('#confirm-dialog');
-    document.querySelector('#confirm-message').textContent=message;
-    dialog.returnValue='cancel';dialog.showModal();
-    return new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='accept'),{once:true}));
+  function confirmAction(message, label = 'Eliminar') {
+    const element = document.querySelector('#eliminaModal');
+    const modal = bootstrap.Modal.getOrCreateInstance(element);
+    document.querySelector('#confirm-message').textContent = message;
+    const accept = document.querySelector('#confirm-action');
+    accept.textContent = label;
+    const buttons = element.querySelectorAll('button');
+    buttons.forEach(button => { button.disabled = true; });
+    element.addEventListener('shown.bs.modal', () => { buttons.forEach(button => { button.disabled = false; }); }, {once:true});
+    let accepted = false;
+    return new Promise(resolve => {
+      document.querySelector('#form-elimina').onsubmit = event => { event.preventDefault(); accepted = true; modal.hide(); };
+      element.addEventListener('hidden.bs.modal', () => resolve(accepted), {once:true});
+      modal.show();
+    });
   }
-  const badge=item=>{const s=D.status(item);return `<span class="badge ${s}">${labels[s]}</span>`;};
-  const stat=(label,value,cls='')=>`<div class="stat"><span class="stat-label">${label}</span><strong class="stat-value ${cls}">${value}</strong></div>`;
-  function heading(title,subtitle,actions='') {return `<div class="page-heading"><div><div class="eyebrow">Gestión de contratos</div><h1>${esc(title)}</h1><div class="subtitle">${esc(subtitle)}</div></div><div class="actions">${actions}</div></div>`;}
-  function download(rows,name) {
-    const url=URL.createObjectURL(new Blob([D.csv(rows)],{type:'text/csv;charset=utf-8;'}));
-    const link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  function download(rows, name) {
+    const url = URL.createObjectURL(new Blob([D.csv(rows)], {type:'text/csv;charset=utf-8;'}));
+    const link = document.createElement('a'); link.href = url; link.download = name;
+    document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  const normalize=value=>String(value).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
-  function visibleTenders() {return state.licitaciones.filter(x=>(filter==='all'||(filter==='alerts'?D.status(x)!=='active':D.status(x)===filter))&&normalize(Object.values(x).join(' ')).includes(normalize(query)));}
+  const normalize = value => String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const tenderFields = ['nombre_licitacion','tipo','renovable','fecha_inicio','meses','monto_total','valor_cuota_inicial','valor_cuota_mensual','orden_compra','nombre_empresa','rut_empresa','usuario_beneficiado','observacion'];
+  const tenderHeaders = ['Nombre','Tipo','Renovable','Fecha De Inicio','Numero De Meses','Monto Total','Valor Cuota Inicial','Valor Cuota Mensual','Orden De Compra','Nombre De La Empresa','Rut De La Empresa','Usuario Beneficiado','Observacion'];
+  const visibleTenders = () => state.licitaciones.filter(x => normalize(tenderFields.map(k => x[k]).join(' ')).includes(normalize(query)));
+  const visiblePayments = id => state.pagos.filter(x => x.id_licitacion === id && normalize([x.fecha,x.factura,x.monto].join(' ')).includes(normalize(query)));
+  function bindSearch(render) {
+    const input = document.querySelector('#search'); input.value = query;
+    input.form.onsubmit = event => { event.preventDefault(); query = input.value; render(); };
+    input.addEventListener('input', () => { query = input.value; render(); });
+  }
   function renderTenders() {
-    currentId=null;
-    const counts=state.licitaciones.reduce((acc,x)=>(acc[D.status(x)]++,acc),{active:0,warning:0,expired:0});
-    app.innerHTML=heading('Licitaciones','Consulta contratos, revisa sus vencimientos y administra los pagos.',`<button class="button secondary" id="alerts">Avisos (${counts.warning+counts.expired})</button><a class="button" href="#/licitaciones/nueva">+ Agregar licitación</a>`)+
-      `<div class="stats">${stat('Total de licitaciones',state.licitaciones.length)}${stat('Vigentes',counts.active)}${stat('Por vencer',counts.warning)}${stat('Vencidas',counts.expired)}</div>
-      <section class="panel" aria-label="Listado de licitaciones"><div class="toolbar"><div class="filters"><input id="search" type="search" placeholder="Buscar nombre, empresa, orden…" aria-label="Buscar licitaciones" value="${esc(query)}"><select id="status-filter" aria-label="Filtrar por estado"><option value="all">Todos los estados</option><option value="active">Vigentes</option><option value="warning">Por vencer</option><option value="expired">Vencidas</option><option value="alerts">Todos los avisos</option></select></div><button id="export" class="button secondary">↓ Exportar CSV / Excel</button></div><div class="table-scroll" role="region" aria-label="Tabla de licitaciones, desplazable horizontalmente" tabindex="0"><table><thead><tr>${['N°','Nombre','Estado','Tipo','Renovable','Fecha de inicio','Meses','Fecha de término','Monto total','Cuota inicial','Cuota mensual','Orden de compra','Empresa','RUT empresa','Usuario beneficiado','Observación','Acciones'].map(h=>`<th scope="col">${h}</th>`).join('')}</tr></thead><tbody id="rows"></tbody></table></div><div class="table-footer" id="count" aria-live="polite"></div></section><p class="muted">Avisos: 4 meses antes del término para licitaciones normales y 2 meses para compra ágil. Desliza la tabla para ver todos los campos.</p>`;
-    document.querySelector('#status-filter').value=filter;
-    document.querySelector('#search').addEventListener('input',event=>{query=event.target.value;renderTenderRows();});
-    document.querySelector('#status-filter').addEventListener('change',event=>{filter=event.target.value;renderTenderRows();});
-    document.querySelector('#alerts').onclick=()=>{filter='alerts';document.querySelector('#status-filter').value=filter;renderTenderRows();};
-    document.querySelector('#export').onclick=()=>download([['Nombre','Estado','Tipo','Renovable','Inicio','Meses','Término','Monto total','Cuota inicial','Cuota mensual','Orden de compra','Empresa','RUT empresa','Usuario beneficiado','Observación'],...visibleTenders().map(x=>[x.nombre_licitacion,labels[D.status(x)],x.tipo,x.renovable,x.fecha_inicio,x.meses,D.dates(x).end,x.monto_total,x.valor_cuota_inicial,x.valor_cuota_mensual,x.orden_compra,x.nombre_empresa,x.rut_empresa,x.usuario_beneficiado,x.observacion])],'licitaciones-demo.csv');
+    currentId = null; app.innerHTML = V.tenders;
+    const alerts = state.licitaciones.filter(x => D.status(x) !== 'active');
+    document.querySelector('#numeroMensajes').textContent = alerts.length;
+    const bell = document.querySelector('#notificaciones-icono');
+    if (alerts.length) bell.classList.add('bx-tada');
+    function showAlerts() {
+      document.querySelector('#contract-alerts')?.remove();
+      const holder = document.createElement('div'); holder.id = 'contract-alerts';
+      holder.innerHTML = alerts.map(x => `<div class="alert alert-${D.status(x) === 'expired' ? 'danger' : 'warning'} alert-dismissible fade show" role="alert">La licitación de nombre: <strong>"${esc(x.nombre_licitacion)}"</strong> del tipo ${esc(x.tipo)}, <strong>${D.status(x) === 'expired' ? 'ALCANZÓ su período de término' : 'está por alcanzar su período de término'}</strong> y su observación es: ${esc(x.observacion)}.<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button></div>`).join('') || '<div class="alert alert-info" role="alert">No hay avisos de vencimiento.</div>';
+      document.querySelector('#tablaindex').before(holder);
+      bell.classList.remove('bx-tada'); document.querySelector('#numeroMensajes').textContent = '';
+    }
+    bell.onclick = showAlerts;
+    bell.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); showAlerts(); } };
+    bindSearch(renderTenderRows);
+    document.querySelector('#formExcel').onsubmit = event => { event.preventDefault(); download([tenderHeaders,...visibleTenders().map(x => tenderFields.map(k => x[k]))], 'licitaciones-demo.csv'); };
     renderTenderRows();
   }
   function renderTenderRows() {
-    const rows=visibleTenders();
-    document.querySelector('#rows').innerHTML=rows.map((x,i)=>`<tr><td>${i+1}</td><td class="name-cell">${esc(x.nombre_licitacion)}<small>${esc(x.orden_compra)}</small></td><td>${badge(x)}</td><td class="nowrap">${esc(x.tipo)}</td><td>${esc(x.renovable)}</td><td class="nowrap">${date(x.fecha_inicio)}</td><td>${x.meses}</td><td class="nowrap">${date(D.dates(x).end)}</td><td class="nowrap">${money(x.monto_total)}</td><td class="nowrap">${money(x.valor_cuota_inicial)}</td><td class="nowrap">${money(x.valor_cuota_mensual)}</td><td>${esc(x.orden_compra)}</td><td>${esc(x.nombre_empresa)}</td><td class="nowrap">${esc(x.rut_empresa)}</td><td>${esc(x.usuario_beneficiado)}</td><td>${esc(x.observacion)}</td><td><div class="actions"><a class="button small edit" href="#/licitaciones/${encodeURIComponent(x.id)}/editar" aria-label="Editar ${esc(x.nombre_licitacion)}">Editar</a><a class="button small pay" href="#/pagos/${encodeURIComponent(x.id)}" aria-label="Pagos de ${esc(x.nombre_licitacion)}">Pagos</a><button class="button small secondary" data-delete-tender="${esc(x.id)}" aria-label="Eliminar ${esc(x.nombre_licitacion)}">Eliminar</button></div></td></tr>`).join('')||'<tr><td colspan="17" class="empty">No hay licitaciones que coincidan. Agrega una o cambia los filtros.</td></tr>';
-    document.querySelector('#count').textContent=`${rows.length} de ${state.licitaciones.length} licitaciones · Montos en pesos chilenos (CLP)`;
+    const images = {active:'Verde',warning:'Amarillo',expired:'Rojo'};
+    const labels = {active:'Vigente',warning:'Por vencer',expired:'Vencida'};
+    document.querySelector('#rows').innerHTML = visibleTenders().map(x => {
+      const index = state.licitaciones.indexOf(x) + 1, status = D.status(x), id = encodeURIComponent(x.id);
+      return `<tr class="centrado" id="fila-${index}"><td>${index}</td>${tenderFields.map(k => `<td>${esc(x[k])}</td>`).join('')}<td hidden>${D.dates(x).end}</td><td hidden>${D.dates(x).notice}</td><td class="container-custom"><a href="#/licitaciones/${id}/editar" class="btn btn-warning btn-sm" aria-label="Editar ${esc(x.nombre_licitacion)}">Editar</a> <a href="#/pagos/${id}" class="btn btn-primary btn-sm" aria-label="Pagos de ${esc(x.nombre_licitacion)}">Pagos</a> <button type="button" class="btn btn-danger btn-sm" data-delete-tender="${esc(x.id)}" aria-label="Eliminar ${esc(x.nombre_licitacion)}">Eliminar</button></td><td class="centrado"><figure class="figure"><img src="assets/imagenes/semaforo${images[status]}.png" class="figure-img rounded" width="15" height="15" alt="${labels[status]}" title="${labels[status]}"></figure></td></tr>`;
+    }).join('') || '<tr><td colspan="16" class="centrado">No hay licitaciones que mostrar.</td></tr>';
   }
-  const input=(name,label,value='',type='text',extra='')=>`<label class="field" for="${name}">${label}<input id="${name}" name="${name}" type="${type}" value="${esc(value)}" ${extra}></label>`;
-  const select=(name,label,value,options)=>`<label class="field" for="${name}">${label}<select id="${name}" name="${name}">${options.map(x=>`<option${x===value?' selected':''}>${x}</option>`).join('')}</select></label>`;
+  function configureForm(form, item) {
+    for (const element of form.elements) {
+      if (!element.name) continue;
+      const key = element.name === 'nombre' ? 'nombre_licitacion' : element.name, value = item[key];
+      if (element.type === 'radio') element.checked = value != null && normalize(element.value) === normalize(value);
+      else if (value != null) element.value = value;
+      if (element.type === 'number') { element.min = key === 'meses' || key === 'monto' ? '1' : '0'; element.max = key === 'meses' ? '600' : '999999999999'; element.step = '1'; }
+      if (element.type === 'date') { element.min = '1900-01-01'; element.max = '2100-12-31'; }
+    }
+    const error = document.createElement('div'); error.id = 'form-error'; error.className = 'alert alert-danger'; error.setAttribute('role','alert'); error.hidden = true; form.before(error);
+  }
+  function formValue(form) {
+    const value = Object.fromEntries(new FormData(form));
+    for (const key of Object.keys(value)) value[key] = value[key].trim();
+    const invalid = Array.from(form.elements).find(x => x.required && x.type !== 'radio' && !x.value.trim());
+    if (invalid) { const error = document.querySelector('#form-error'); error.textContent = 'Completa los campos obligatorios con texto válido.'; error.hidden = false; invalid.focus(); return null; }
+    return value;
+  }
   function renderTenderForm(id) {
-    const item=id?state.licitaciones.find(x=>x.id===id):{};
-    if(!item)return missing();
-    app.innerHTML='<a class="back-link" href="#/licitaciones">← Regresar a licitaciones</a>'+heading(id?'Editar licitación':'Nueva licitación','Completa los campos del contrato. Los importes se expresan en CLP.')+
-    `<form id="tender-form" class="panel form-panel"><div class="form-grid">${input('nombre_licitacion','Nombre *',item.nombre_licitacion,'text','required maxlength="160"')}${select('tipo','Tipo de licitación',item.tipo,['Normal','Compra ágil'])}${select('renovable','Renovable',item.renovable,['Sí','No'])}${input('fecha_inicio','Fecha de inicio *',item.fecha_inicio||D.localDate(new Date()),'date','required min="1900-01-01" max="2100-12-31"')}${input('meses','Número de meses *',item.meses||12,'number','required min="1" max="600" step="1"')}${input('monto_total','Monto total *',item.monto_total,'number','required min="0" max="999999999999" step="1"')}${input('valor_cuota_inicial','Valor cuota inicial',item.valor_cuota_inicial||0,'number','min="0" max="999999999999" step="1"')}${input('valor_cuota_mensual','Valor cuota mensual *',item.valor_cuota_mensual,'number','required min="0" max="999999999999" step="1"')}${input('orden_compra','Orden de compra *',item.orden_compra,'text','required maxlength="100"')}${input('nombre_empresa','Nombre de la empresa *',item.nombre_empresa,'text','required maxlength="160"')}${input('rut_empresa','RUT de la empresa / identificador demo *',item.rut_empresa,'text','required maxlength="30"')}${input('usuario_beneficiado','Usuario beneficiado *',item.usuario_beneficiado,'text','required maxlength="160"')}<label class="field full" for="observacion">Observación<textarea id="observacion" name="observacion" maxlength="1000">${esc(item.observacion)}</textarea></label></div><p class="muted" id="date-preview"></p><p id="form-error" class="error" role="alert"></p><div class="actions form-actions"><a class="button secondary" href="#/licitaciones">Cancelar</a><button class="button" type="submit">Guardar licitación</button></div></form>`;
-    const form=document.querySelector('#tender-form');
-    function preview(){const v=Object.fromEntries(new FormData(form));document.querySelector('#date-preview').textContent=v.fecha_inicio&&Number(v.meses)>0?`Término: ${date(D.dates(v).end)} · Aviso desde: ${date(D.dates(v).notice)}`:'';}
-    form.addEventListener('input',preview);preview();
-    form.onsubmit=event=>{
-      event.preventDefault();const value=Object.fromEntries(new FormData(form));
-      for(const k of Object.keys(value))value[k]=value[k].trim();
-      if(['nombre_licitacion','orden_compra','nombre_empresa','rut_empresa','usuario_beneficiado'].some(k=>!value[k])){document.querySelector('#form-error').textContent='Completa los campos obligatorios con texto válido.';return;}
-      for(const k of ['meses','monto_total','valor_cuota_inicial','valor_cuota_mensual'])value[k]=Number(value[k]);
-      value.id=id||uid();if(id)state.licitaciones=state.licitaciones.map(x=>x.id===id?value:x);else state.licitaciones.push(value);
-      const saved=persist();location.hash='/licitaciones';if(saved)notify('Licitación guardada en este navegador.');
+    const item = id ? state.licitaciones.find(x => x.id === id) : {};
+    if (!item) return missing();
+    app.innerHTML = id ? V.editTender : V.newTender;
+    const form = document.querySelector('#tender-form'); configureForm(form, item);
+    form.onsubmit = event => {
+      event.preventDefault(); const value = formValue(form); if (!value) return;
+      value.nombre_licitacion = value.nombre; delete value.nombre;
+      for (const key of ['meses','monto_total','valor_cuota_inicial','valor_cuota_mensual']) value[key] = Number(value[key]);
+      value.id = id || uid();
+      if (id) state.licitaciones = state.licitaciones.map(x => x.id === id ? value : x); else state.licitaciones.push(value);
+      const saved = persist(); location.hash = '/licitaciones'; if (saved) notify('Licitación guardada en este navegador.');
     };
   }
-  function visiblePayments(id) {return state.pagos.filter(x=>x.id_licitacion===id&&normalize([x.fecha,date(x.fecha),x.factura,x.monto].join(' ')).includes(normalize(query)));}
+  function bindPaymentLinks(id) {
+    for (const link of app.querySelectorAll('[data-payment-link]')) link.href = `#/pagos/${encodeURIComponent(id)}${link.textContent.trim() === 'Agregar' ? '/nuevo' : ''}`;
+  }
   function renderPayments(id) {
-    const item=state.licitaciones.find(x=>x.id===id);if(!item)return missing();currentId=id;
-    const all=state.pagos.filter(x=>x.id_licitacion===id),paid=all.reduce((sum,x)=>sum+x.monto,0);
-    app.innerHTML='<a class="back-link" href="#/licitaciones">← Regresar a licitaciones</a>'+heading('Pagos',item.nombre_licitacion,`<a class="button" href="#/pagos/${encodeURIComponent(id)}/nuevo">+ Agregar pago</a>`)+
-      `<div class="details"><strong>${esc(item.nombre_empresa)}</strong> · ${esc(item.orden_compra)}<br>Inicio: ${date(item.fecha_inicio)} · Término: ${date(D.dates(item).end)} · ${badge(item)}</div><div class="stats">${stat('Monto del contrato',money(item.monto_total),'money')}${stat('Total pagado',money(paid),'money')}${stat('Saldo del contrato',money(item.monto_total-paid),'money')}${stat('Pagos registrados',all.length)}</div><section class="panel" aria-label="Pagos de la licitación"><div class="toolbar"><div class="filters"><input id="search" type="search" aria-label="Buscar pagos" placeholder="Buscar fecha, factura o monto…" value="${esc(query)}"></div><button class="button secondary" id="export">↓ Exportar CSV / Excel</button></div><div class="table-scroll"><table><thead><tr><th scope="col">Número de cuota</th><th scope="col">Fecha</th><th scope="col">Monto</th><th scope="col">Factura</th><th scope="col">Acciones</th></tr></thead><tbody id="rows"></tbody></table></div><div class="table-footer" id="count" aria-live="polite"></div></section>`;
-    document.querySelector('#search').oninput=event=>{query=event.target.value;renderPaymentRows(id);};
-    document.querySelector('#export').onclick=()=>download([['Número de cuota','Fecha','Monto','Factura'],...visiblePayments(id).map(x=>[all.findIndex(p=>p.id===x.id)+1,x.fecha,x.monto,x.factura])],`pagos-${id}.csv`);
+    const item = state.licitaciones.find(x => x.id === id); if (!item) return missing();
+    currentId = id; app.innerHTML = V.payments;
+    document.querySelector('#payment-title').textContent = item.nombre_licitacion;
+    bindPaymentLinks(id); bindSearch(() => renderPaymentRows(id));
+    document.querySelector('#formExcel').onsubmit = event => {
+      event.preventDefault(); const all = state.pagos.filter(x => x.id_licitacion === id);
+      download([['Numero de cuota','Fecha','Monto','Factura'],...visiblePayments(id).map(x => [all.indexOf(x)+1,x.fecha,x.monto,x.factura])], `pagos-${id}.csv`);
+    };
     renderPaymentRows(id);
   }
   function renderPaymentRows(id) {
-    const all=state.pagos.filter(x=>x.id_licitacion===id),rows=visiblePayments(id);
-    document.querySelector('#rows').innerHTML=rows.map(x=>`<tr><td>${all.findIndex(p=>p.id===x.id)+1}</td><td>${date(x.fecha)}</td><td>${money(x.monto)}</td><td>${esc(x.factura)}</td><td><div class="actions"><a class="button small edit" href="#/pagos/${encodeURIComponent(id)}/${encodeURIComponent(x.id)}/editar" aria-label="Editar pago ${esc(x.factura)}">Editar</a><button class="button small secondary" data-delete-payment="${esc(x.id)}" aria-label="Eliminar pago ${esc(x.factura)}">Eliminar</button></div></td></tr>`).join('')||'<tr><td colspan="5" class="empty">No hay pagos que mostrar. Puedes registrar un nuevo pago.</td></tr>';
-    document.querySelector('#count').textContent=`${rows.length} de ${all.length} pagos · Montos en pesos chilenos (CLP)`;
+    const all = state.pagos.filter(x => x.id_licitacion === id);
+    document.querySelector('#rows').innerHTML = visiblePayments(id).map(x => `<tr><td>${all.indexOf(x)+1}</td><td>${esc(x.fecha)}</td><td>${esc(x.monto)}</td><td>${esc(x.factura)}</td><td><a class="btn btn-warning btn-sm" href="#/pagos/${encodeURIComponent(id)}/${encodeURIComponent(x.id)}/editar" aria-label="Editar pago ${esc(x.factura)}">Editar</a> <button type="button" class="btn btn-danger btn-sm" data-delete-payment="${esc(x.id)}" aria-label="Eliminar pago ${esc(x.factura)}">Eliminar</button></td></tr>`).join('') || '<tr><td colspan="5">No hay pagos que mostrar.</td></tr>';
   }
-  function renderPaymentForm(id,paymentId) {
-    const item=state.licitaciones.find(x=>x.id===id),payment=paymentId?state.pagos.find(x=>x.id===paymentId&&x.id_licitacion===id):{};
-    if(!item||!payment)return missing();
-    const back=`#/pagos/${encodeURIComponent(id)}`;
-    app.innerHTML=`<a class="back-link" href="${back}">← Regresar a pagos</a>`+heading(paymentId?'Editar pago':'Nuevo pago',item.nombre_licitacion)+`<form id="payment-form" class="panel form-panel"><div class="form-grid">${input('fecha','Fecha *',payment.fecha||D.localDate(new Date()),'date','required min="1900-01-01" max="2100-12-31"')}${input('factura','Factura *',payment.factura,'text','required maxlength="100"')}${input('monto','Monto (CLP) *',payment.monto??item.valor_cuota_mensual,'number','required min="1" max="999999999999" step="1"')}</div><p id="form-error" class="error" role="alert"></p><div class="actions form-actions"><a class="button secondary" href="${back}">Cancelar</a><button class="button" type="submit">Guardar pago</button></div></form>`;
-    document.querySelector('#payment-form').onsubmit=event=>{
-      event.preventDefault();const value=Object.fromEntries(new FormData(event.target));value.factura=value.factura.trim();
-      if(!value.factura){document.querySelector('#form-error').textContent='Escribe un número o identificador de factura.';return;}
-      value.monto=Number(value.monto);value.id=paymentId||uid();value.id_licitacion=id;
-      if(paymentId)state.pagos=state.pagos.map(x=>x.id===paymentId?value:x);else state.pagos.push(value);
-      const saved=persist();location.hash=back;if(saved)notify('Pago guardado en este navegador.');
+  function renderPaymentForm(id, paymentId) {
+    const item = state.licitaciones.find(x => x.id === id), payment = paymentId ? state.pagos.find(x => x.id === paymentId && x.id_licitacion === id) : {};
+    if (!item || !payment) return missing();
+    app.innerHTML = paymentId ? V.editPayment : V.newPayment;
+    const title = document.querySelector('#payment-title'); if (title) title.textContent = item.nombre_licitacion;
+    bindPaymentLinks(id);
+    const form = document.querySelector('#payment-form'); configureForm(form, payment);
+    form.onsubmit = event => {
+      event.preventDefault(); const value = formValue(form); if (!value) return;
+      value.monto = Number(value.monto); value.id = paymentId || uid(); value.id_licitacion = id;
+      if (paymentId) state.pagos = state.pagos.map(x => x.id === paymentId ? value : x); else state.pagos.push(value);
+      const saved = persist(); location.hash = `/pagos/${encodeURIComponent(id)}`; if (saved) notify('Pago guardado en este navegador.');
     };
   }
-  function missing(){app.innerHTML=heading('Registro no encontrado','El registro pudo haberse eliminado o el enlace no es válido.')+'<a class="button" href="#/licitaciones">Volver a licitaciones</a>';}
+  function missing() { app.innerHTML = '<h3 class="my-3">Registro no encontrado</h3><a class="btn btn-secondary" href="#/licitaciones">Regresar</a>'; }
   function route() {
-    query='';
-    let parts;try{parts=location.hash.replace(/^#\/?/,'').split('/').map(decodeURIComponent);}catch{return missing();}
-    if(!parts[0]||(parts[0]==='licitaciones'&&parts.length===1))renderTenders();
-    else if(parts[0]==='licitaciones'&&parts[1]==='nueva'&&parts.length===2)renderTenderForm();
-    else if(parts[0]==='licitaciones'&&parts[2]==='editar'&&parts.length===3)renderTenderForm(parts[1]);
-    else if(parts[0]==='pagos'&&parts.length===2)renderPayments(parts[1]);
-    else if(parts[0]==='pagos'&&parts[2]==='nuevo'&&parts.length===3)renderPaymentForm(parts[1]);
-    else if(parts[0]==='pagos'&&parts[3]==='editar'&&parts.length===4)renderPaymentForm(parts[1],parts[2]);
+    query = ''; let parts;
+    try { parts = location.hash.replace(/^#\/?/, '').split('/').map(decodeURIComponent); } catch { return missing(); }
+    if (!parts[0] || (parts[0] === 'licitaciones' && parts.length === 1)) renderTenders();
+    else if (parts[0] === 'licitaciones' && parts[1] === 'nueva' && parts.length === 2) renderTenderForm();
+    else if (parts[0] === 'licitaciones' && parts[2] === 'editar' && parts.length === 3) renderTenderForm(parts[1]);
+    else if (parts[0] === 'pagos' && parts.length === 2) renderPayments(parts[1]);
+    else if (parts[0] === 'pagos' && parts[2] === 'nuevo' && parts.length === 3) renderPaymentForm(parts[1]);
+    else if (parts[0] === 'pagos' && parts[3] === 'editar' && parts.length === 4) renderPaymentForm(parts[1], parts[2]);
     else missing();
-    app.focus({preventScroll:true});window.scrollTo(0,0);
+    app.focus({preventScroll:true}); window.scrollTo(0,0);
   }
-  app.addEventListener('click',async event=>{
-    const tenderButton=event.target.closest('[data-delete-tender]');
-    if(tenderButton){const id=tenderButton.dataset.deleteTender;if(await confirmAction('¿Eliminar esta licitación y todos sus pagos de la demostración?')){state.licitaciones=state.licitaciones.filter(x=>x.id!==id);state.pagos=state.pagos.filter(x=>x.id_licitacion!==id);const saved=persist();renderTenders();if(saved)notify('Licitación y pagos eliminados.');}}
-    const paymentButton=event.target.closest('[data-delete-payment]');
-    if(paymentButton){const id=paymentButton.dataset.deletePayment;if(await confirmAction('¿Eliminar este pago de la demostración?')){state.pagos=state.pagos.filter(x=>x.id!==id);const saved=persist();renderPayments(currentId);if(saved)notify('Pago eliminado.');}}
+  app.addEventListener('click', async event => {
+    const tender = event.target.closest('[data-delete-tender]');
+    if (tender && await confirmAction('¿Desea eliminar este registro y sus pagos asociados?')) {
+      const id = tender.dataset.deleteTender;
+      state.licitaciones = state.licitaciones.filter(x => x.id !== id); state.pagos = state.pagos.filter(x => x.id_licitacion !== id);
+      const saved = persist(); renderTenders(); if (saved) notify('Licitación y pagos eliminados.');
+    }
+    const payment = event.target.closest('[data-delete-payment]');
+    if (payment && await confirmAction('¿Desea eliminar este registro?')) {
+      state.pagos = state.pagos.filter(x => x.id !== payment.dataset.deletePayment);
+      const saved = persist(); renderPayments(currentId); if (saved) notify('Pago eliminado.');
+    }
   });
-  document.querySelector('#reset-demo').onclick=async()=>{
-    if(await confirmAction('Se reemplazarán tus cambios locales por nuevos datos ficticios aleatorios. ¿Continuar?')){state=D.createDemo();filter='all';const saved=persist();if(location.hash==='#/licitaciones')route();else location.hash='/licitaciones';if(saved)notify('Datos de demostración restablecidos.');}
+  document.querySelector('#reset-demo').onclick = async () => {
+    if (await confirmAction('Se reemplazarán tus cambios locales por nuevos datos ficticios. ¿Continuar?', 'Restablecer')) {
+      state = D.createDemo(); const saved = persist();
+      if (location.hash === '#/licitaciones') route(); else location.hash = '/licitaciones';
+      if (saved) notify('Datos de demostración restablecidos.');
+    }
   };
-  window.addEventListener('hashchange',route);route();
-  if(storageWarning)notify('No fue posible recuperar los datos locales. Se cargó una nueva demostración.');
-  else persist();
+  document.querySelector('#year').textContent = new Date().getFullYear();
+  window.addEventListener('hashchange', route); route();
+  if (storageWarning) notify('No fue posible recuperar los datos locales. Se cargó una nueva demostración.'); else persist();
 })();
